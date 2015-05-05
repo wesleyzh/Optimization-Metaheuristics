@@ -1,0 +1,22 @@
+model coffee1.mod;
+model coffee2.mod;
+data coffee.dat;
+option solver cplex;
+option cplex_options 'mipdisplay 2 mipinterval 100 primal';
+option omit_zero_rows 1;option display_eps .000001;
+problem Master: x, z, Total_Cost, Cut_Defn;problem Sub: Lambda_c, Lambda_m, Dual_Cost, Dual_c, Dual_m;
+suffix unbdd OUT;
+let nCUT := 0;let z := 0;let X := 1;
+param GAP default Infinity;
+repeat { printf "\nITERATION %d\n\n", nCUT+1;
+
+solve Sub;printf "\n";
+if Sub.result = "unbounded" then { printf "UNBOUNDED\n";   let nCUT := nCUT + 1;   let cut_type[nCUT] := "ray";   let {i in SCENARIO_c, j in SCENARIO_m} lambda_c[i,j,nCUT] :=Lambda_c[i,j].unbdd;      let {i in SCENARIO_c, j in SCENARIO_m} lambda_m[i,j,nCUT] :=Lambda_m[i,j].unbdd;
+}
+else
+{    let GAP := min (GAP, Dual_Cost - z);    option display_1col 0;    display Dual_Cost;    display z;    if Dual_Cost <= z + 0.00001 then break;    let nCUT := nCUT + 1;    let cut_type[nCUT] := "point";       let {i in SCENARIO_c, j in SCENARIO_m} lambda_c[i,j,nCUT] :=Lambda_c[i,j];      let {i in SCENARIO_c, j in SCENARIO_m} lambda_m[i,j,nCUT] :=Lambda_m[i,j];   }
+
+   printf "\nRE-SOLVING MASTER PROBLEM\n\n";   solve Master;   printf "\n";   option display_1col 20;   display x;
+   let X := x;}; 
+
+option display_1col 0;display Dual_Cost;display x;
